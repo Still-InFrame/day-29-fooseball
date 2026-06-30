@@ -35,6 +35,7 @@ function Game() {
   const code = (params.code ?? "").toUpperCase();
   const mode: Mode = (sp.get("m") as Mode) ?? "local";
   const mySide: Side | null = mode === "host" ? "blue" : mode === "guest" ? "red" : null;
+  const powerups = sp.get("pu") === "1";
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -51,6 +52,7 @@ function Game() {
   );
   const [oppLeft, setOppLeft] = useState(false);
   const [goalBanner, setGoalBanner] = useState<{ key: number; side: Side } | null>(null);
+  const [freezeBanner, setFreezeBanner] = useState<{ key: number; side: Side } | null>(null);
   const [muted, setMuted] = useState(false);
   const [copied, setCopied] = useState<"" | "code" | "link">("");
 
@@ -63,7 +65,7 @@ function Game() {
   const kickDirRef = useRef(0); // guest's current armed kick direction, sent to host
   const lastSentRef = useRef(0);
   const lastShakeRef = useRef(0); // client-side throttle for table shakes
-  const lastSeen = useRef({ hits: 0, walls: 0, goals: 0, vx: 0, scoreBlue: 0, scoreRed: 0 });
+  const lastSeen = useRef({ hits: 0, walls: 0, goals: 0, vx: 0, scoreBlue: 0, scoreRed: 0, bf: 0, rf: 0 });
   // Guest interpolation target from the latest host snapshot.
   const netRef = useRef<{ bx: number; by: number; bo: number; bs: number } | null>(null);
   const submittedRef = useRef(false);
@@ -75,6 +77,11 @@ function Game() {
     muteRef.current = muted;
     sfx.setMuted(muted);
   }, [muted]);
+
+  // Apply the power-ups setting to the engine state (host/local spawn cubes).
+  useEffect(() => {
+    stateRef.current.powerups = powerups;
+  }, [powerups]);
 
   // Shake the table (Space). Local screen-shake + sound for the presser; the host
   // owns the ball so it applies the jolt (guest asks via the channel). Either
@@ -174,6 +181,11 @@ function Game() {
         s.phase = m.ph;
         s.phaseTimer = m.pt;
         s.winner = m.win;
+        s.cubeActive = m.ca;
+        s.cubeX = m.cx;
+        s.cubeY = m.cy;
+        s.blueFrozen = m.bf;
+        s.redFrozen = m.rf;
         setOppLeft(false);
       },
       onRod: (m: RodMsg) => {
@@ -225,6 +237,7 @@ function Game() {
         setScoreRed(s.scoreRed);
         submittedRef.current = false;
         setGoalBanner(null);
+        setFreezeBanner(null);
       }
     };
 
@@ -242,13 +255,22 @@ function Game() {
       const arm = (left: boolean, right: boolean) => (right ? 1 : left ? -1 : 0);
 
       if (mode === "local") {
-        s.blueTarget = move(s.blueTarget, held.has("KeyW"), held.has("KeyS"));
-        s.redTarget = move(s.redTarget, held.has("ArrowUp"), held.has("ArrowDown"));
-        const bk = arm(held.has("KeyA"), held.has("KeyD"));
-        if (bk) kick(s, "blue", bk);
-        const rk = arm(held.has("ArrowLeft"), held.has("ArrowRight"));
-        if (rk) kick(s, "red", rk);
+        if (s.blueFrozen <= 0) {
+          s.blueTarget = move(s.blueTarget, held.has("KeyW"), held.has("KeyS"));
+          const bk = arm(held.has("KeyA"), held.has("KeyD"));
+          if (bk) kick(s, "blue", bk);
+        }
+        if (s.redFrozen <= 0) {
+          s.redTarget = move(s.redTarget, held.has("ArrowUp"), held.has("ArrowDown"));
+          const rk = arm(held.has("ArrowLeft"), held.has("ArrowRight"));
+          if (rk) kick(s, "red", rk);
+        }
       } else if (mySide) {
+        const myFrozen = mySide === "blue" ? s.blueFrozen > 0 : s.redFrozen > 0;
+        if (myFrozen) {
+          kickDirRef.current = 0; // frozen: no input goes out
+          return;
+        }
         const up = held.has("ArrowUp") || held.has("KeyW");
         const down = held.has("ArrowDown") || held.has("KeyS");
         // <- / -> (or A / D) kick left / right.
@@ -275,6 +297,21 @@ function Game() {
       if (s.walls !== seen.walls) sfx.wall();
       seen.hits = s.hits;
       seen.walls = s.walls;
+    };
+
+    // Fire the icy zap + "FROZEN!" banner on the rising edge of a freeze.
+    const onFreezeChange = () => {
+      const s = stateRef.current;
+      const seen = lastSeen.current;
+      const bfUp = s.blueFrozen > 0 && seen.bf <= 0;
+      const rfUp = s.redFrozen > 0 && seen.rf <= 0;
+      seen.bf = s.blueFrozen;
+      seen.rf = s.redFrozen;
+      if (bfUp || rfUp) {
+        sfx.freeze();
+        shakeRef.current = Math.max(shakeRef.current, 12);
+        setFreezeBanner({ key: performance.now(), side: bfUp ? "blue" : "red" });
+      }
     };
 
     const onScoreChange = () => {
@@ -305,6 +342,11 @@ function Game() {
         ph: s.phase,
         win: s.winner,
         pt: s.phaseTimer,
+        ca: s.cubeActive,
+        cx: s.cubeX,
+        cy: s.cubeY,
+        bf: s.blueFrozen,
+        rf: s.redFrozen,
       };
     };
 
@@ -320,6 +362,7 @@ function Game() {
         stepHost(s, dt);
         playEventSounds();
         onScoreChange();
+        onFreezeChange();
         if (s.phase !== prevPhase) reflectPhase();
         if (mode === "host") {
           // Throttle snapshots to ~25Hz, but send immediately on a phase change.
@@ -354,6 +397,7 @@ function Game() {
           }
         }
         onScoreChange();
+        onFreezeChange();
         if (s.phase !== reflectedPhaseRef.current) reflectPhase();
         // Send our rod input ~25Hz.
         if (now - lastSentRef.current > 40) {
@@ -455,6 +499,21 @@ function Game() {
               style={{ textShadow: "4px 4px 0 rgba(0,0,0,0.7)" }}
             >
               GOAL!
+            </span>
+          </div>
+        )}
+
+        {/* freeze flash */}
+        {freezeBanner && (
+          <div
+            key={`f${freezeBanner.key}`}
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          >
+            <span
+              className="goal-flash arcade text-2xl sm:text-4xl"
+              style={{ color: "#9be1ff", textShadow: "3px 3px 0 rgba(0,40,80,0.7)" }}
+            >
+              ❄ {freezeBanner.side.toUpperCase()} FROZEN!
             </span>
           </div>
         )}

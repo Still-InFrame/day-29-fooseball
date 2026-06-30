@@ -32,6 +32,16 @@ export interface GameState {
   blueSwing: number; // -1..1 visual foot swing (eased), for the kick animation
   redSwing: number;
   shakeCd: number; // cooldown (s) before the table can be shaken again
+  // Freeze power-up (Mario-Kart-style ice cube).
+  powerups: boolean; // is the freeze power-up enabled for this match?
+  lastTouch: Side | null; // who last struck the ball (decides who a cube freezes)
+  cubeActive: boolean; // is an ice cube currently on the table?
+  cubeX: number;
+  cubeY: number;
+  cubeTimer: number; // seconds until the next cube spawns (while none is active)
+  blueFrozen: number; // seconds blue's rods are frozen
+  redFrozen: number;
+  freezes: number; // event counter for sound/banner
   scoreBlue: number;
   scoreRed: number;
   phase: Phase;
@@ -69,6 +79,14 @@ const SPREAD = 3; // vertical kick based on where the ball hit the man
 const DRAG = 0.16; // gentle per-second velocity decay (lower = fewer dead stops)
 const SHAKE_IMPULSE = 330; // velocity a table-shake imparts to the ball
 const SHAKE_CD = 0.45; // min seconds between table shakes
+const FREEZE_TIME = 1.5; // seconds a frozen player's rods are locked
+export const CUBE_R = 17; // ice-cube collision/draw radius
+const SPAWN_MIN = 14; // "rare surprise" spawn window (seconds)
+const SPAWN_MAX = 26;
+
+function nextSpawn() {
+  return SPAWN_MIN + Math.random() * (SPAWN_MAX - SPAWN_MIN);
+}
 const KICK_DURATION = 0.16;
 export const KB_SPEED = 430; // keyboard rod-target speed (units/sec)
 const EASE = 22; // how fast men ease toward their target offset
@@ -112,6 +130,15 @@ export function createState(): GameState {
     blueSwing: 0,
     redSwing: 0,
     shakeCd: 0,
+    powerups: false,
+    lastTouch: null,
+    cubeActive: false,
+    cubeX: 0,
+    cubeY: 0,
+    cubeTimer: nextSpawn(),
+    blueFrozen: 0,
+    redFrozen: 0,
+    freezes: 0,
     scoreBlue: 0,
     scoreRed: 0,
     phase: "lobby",
@@ -156,6 +183,12 @@ export function startMatch(state: GameState) {
   state.phaseTimer = COUNTDOWN_TIME;
   state.ball = { x: FIELD.W / 2, y: FIELD.H / 2, vx: 0, vy: 0 };
   state.trail = [];
+  // Reset power-up state (but keep the powerups on/off setting).
+  state.lastTouch = null;
+  state.cubeActive = false;
+  state.cubeTimer = nextSpawn();
+  state.blueFrozen = 0;
+  state.redFrozen = 0;
 }
 
 // dir: +1 drives the ball right, -1 left. Defaults to the side's attacking
@@ -272,7 +305,27 @@ function substep(state: GameState, dt: number): Side | null {
           : 0;
     if (collideRod(b, rod, offset, sideVel, kickDir)) {
       state.hits++;
+      state.lastTouch = rod.side;
       break;
+    }
+  }
+
+  // Ice cube: whoever last touched the ball freezes their opponent.
+  if (state.cubeActive) {
+    const dx = b.x - state.cubeX;
+    const dy = b.y - state.cubeY;
+    const rr = CUBE_R + FIELD.R;
+    if (dx * dx + dy * dy < rr * rr && state.lastTouch) {
+      if (state.lastTouch === "blue") state.redFrozen = FREEZE_TIME;
+      else state.blueFrozen = FREEZE_TIME;
+      state.cubeActive = false;
+      state.cubeTimer = nextSpawn();
+      state.freezes++;
+      // Nudge the ball away so it doesn't sit on the (now gone) cube.
+      const d = Math.hypot(dx, dy) || 1;
+      b.vx += (dx / d) * 120;
+      b.vy += (dy / d) * 120;
+      clampSpeed(b);
     }
   }
   return null;
@@ -295,6 +348,8 @@ function easeOffsets(state: GameState, dt: number) {
   state.blueSwing += (bt - state.blueSwing) * sk;
   state.redSwing += (rt - state.redSwing) * sk;
   if (state.shakeCd > 0) state.shakeCd = Math.max(0, state.shakeCd - dt);
+  if (state.blueFrozen > 0) state.blueFrozen = Math.max(0, state.blueFrozen - dt);
+  if (state.redFrozen > 0) state.redFrozen = Math.max(0, state.redFrozen - dt);
 }
 
 function pushTrail(state: GameState) {
@@ -307,6 +362,15 @@ export function stepHost(state: GameState, dt: number) {
   // Clamp targets into the legal range.
   state.blueTarget = Math.max(-FIELD.O_MAX, Math.min(FIELD.O_MAX, state.blueTarget));
   state.redTarget = Math.max(-FIELD.O_MAX, Math.min(FIELD.O_MAX, state.redTarget));
+  // Frozen rods can't move or kick (authoritative enforcement).
+  if (state.blueFrozen > 0) {
+    state.blueTarget = state.blueOffset;
+    state.blueKick = 0;
+  }
+  if (state.redFrozen > 0) {
+    state.redTarget = state.redOffset;
+    state.redKick = 0;
+  }
   easeOffsets(state, dt);
 
   switch (state.phase) {
@@ -318,6 +382,15 @@ export function stepHost(state: GameState, dt: number) {
       }
       break;
     case "playing": {
+      // Spawn an ice cube now and then (rare surprise).
+      if (state.powerups && !state.cubeActive) {
+        state.cubeTimer -= dt;
+        if (state.cubeTimer <= 0) {
+          state.cubeActive = true;
+          state.cubeX = 300 + Math.random() * 400;
+          state.cubeY = 120 + Math.random() * 360;
+        }
+      }
       // Sub-step so a fast ball can't tunnel through a man.
       const steps = Math.max(1, Math.min(8, Math.ceil((Math.hypot(state.ball.vx, state.ball.vy) * dt) / (FIELD.R * 0.7))));
       const sub = dt / steps;
@@ -333,6 +406,10 @@ export function stepHost(state: GameState, dt: number) {
           const reached = state.scoreBlue >= WIN_SCORE || state.scoreRed >= WIN_SCORE;
           state.phase = "goal";
           state.phaseTimer = GOAL_TIME;
+          // Thaw everyone for the restart.
+          state.blueFrozen = 0;
+          state.redFrozen = 0;
+          state.lastTouch = null;
           if (reached) state.winner = state.scoreBlue > state.scoreRed ? "blue" : "red";
           break;
         }

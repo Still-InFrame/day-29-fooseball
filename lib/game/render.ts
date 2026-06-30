@@ -2,7 +2,7 @@
 // (0..W, 0..H); the caller sizes the backing store and we apply the DPR + shake
 // transform here. Stateless aside from what's in GameState.
 
-import { FIELD, RODS, type GameState, type Side } from "./engine";
+import { CUBE_R, FIELD, RODS, type GameState, type Side } from "./engine";
 
 const COLORS = {
   feltLight: "#15904b",
@@ -90,6 +90,7 @@ function drawRodsAndMen(ctx: CanvasRenderingContext2D, state: GameState, mySide:
     const base = rod.side === "blue" ? COLORS.blue : COLORS.red;
     const dark = rod.side === "blue" ? COLORS.blueDark : COLORS.redDark;
     const mine = mySide === rod.side;
+    const frozen = rod.side === "blue" ? state.blueFrozen > 0 : state.redFrozen > 0;
     const footX = rod.x + swing * REACH;
     for (const baseY of rod.men) {
       const y = baseY + offset;
@@ -138,8 +139,50 @@ function drawRodsAndMen(ctx: CanvasRenderingContext2D, state: GameState, mySide:
       ctx.beginPath();
       ctx.arc(rod.x + lean, y - MH + 9, 3.5, 0, Math.PI * 2);
       ctx.fill();
+
+      // Frost overlay when this side is frozen.
+      if (frozen) {
+        ctx.fillStyle = "rgba(150,225,255,0.55)";
+        roundRect(ctx, rod.x - HW - 2, y - MH - 2, HW * 2 + 4, MH * 1.5 + 4, 6);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.9)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
     }
   }
+}
+
+function drawCube(ctx: CanvasRenderingContext2D, state: GameState) {
+  if (!state.cubeActive) return;
+  const x = state.cubeX;
+  const y = state.cubeY;
+  const r = CUBE_R;
+  ctx.save();
+  ctx.shadowColor = "rgba(120,220,255,0.9)";
+  ctx.shadowBlur = 16;
+  // Icy body.
+  const g = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
+  g.addColorStop(0, "rgba(200,245,255,0.95)");
+  g.addColorStop(1, "rgba(120,190,235,0.95)");
+  ctx.fillStyle = g;
+  roundRect(ctx, x - r, y - r, r * 2, r * 2, 5);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  // Edges + a sparkle to read as ice.
+  ctx.strokeStyle = "rgba(255,255,255,0.95)";
+  ctx.lineWidth = 2;
+  roundRect(ctx, x - r, y - r, r * 2, r * 2, 5);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255,255,255,0.6)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x - r + 5, y - 3);
+  ctx.lineTo(x + r - 5, y - 3);
+  ctx.moveTo(x + 3, y - r + 5);
+  ctx.lineTo(x + 3, y + r - 5);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawBall(ctx: CanvasRenderingContext2D, state: GameState) {
@@ -186,5 +229,6 @@ export function draw(ctx: CanvasRenderingContext2D, state: GameState, opts: Draw
   }
   drawField(ctx);
   drawRodsAndMen(ctx, state, mySide);
+  drawCube(ctx, state);
   drawBall(ctx, state);
 }

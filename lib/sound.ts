@@ -99,6 +99,15 @@ export function rattle() {
   src.start(t);
 }
 
+// Icy zap when a freeze lands — a quick shimmer then a descending tone.
+export function freeze() {
+  if (!enabled) return;
+  [1568, 1318, 988, 740].forEach((f, i) => {
+    setTimeout(() => blip(f, 0.1, "triangle", 0.12), i * 45);
+  });
+  blip(300, 0.4, "sine", 0.1, 120);
+}
+
 // Triumphant little fanfare on match win.
 export function fanfare() {
   [523, 659, 784, 1046, 1318].forEach((f, i) => {

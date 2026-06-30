@@ -19,6 +19,11 @@ export interface SyncMsg {
   ph: Phase;
   win: Side | null;
   pt: number; // phase timer (for countdown display)
+  ca: boolean; // ice cube active
+  cx: number; // cube x
+  cy: number; // cube y
+  bf: number; // blue frozen seconds remaining
+  rf: number; // red frozen seconds remaining
 }
 
 // Guest -> host input.

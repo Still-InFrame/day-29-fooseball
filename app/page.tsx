@@ -15,8 +15,10 @@ function newCode() {
 export default function Home() {
   const router = useRouter();
   const [join, setJoin] = useState("");
+  const [powerups, setPowerups] = useState(true);
 
-  const create = () => router.push(`/play/${newCode()}?m=host`);
+  const pu = powerups ? 1 : 0;
+  const create = () => router.push(`/play/${newCode()}?m=host&pu=${pu}`);
   const doJoin = () => {
     const code = join.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
     if (code.length === 4) router.push(`/play/${code}?m=guest`);
@@ -38,8 +40,19 @@ export default function Home() {
           <div className="border-[3px] border-amber/70 crt-glow rounded-lg p-5 bg-black/30">
             <h2 className="arcade text-[0.7rem] text-amber mb-4">START A MATCH</h2>
 
-            <button onClick={create} className="btn text-blue w-full mb-5 !text-[0.8rem]">
+            <button onClick={create} className="btn text-blue w-full mb-3 !text-[0.8rem]">
               ▶ Create Room
+            </button>
+
+            <button
+              onClick={() => setPowerups((p) => !p)}
+              className="arcade w-full text-[0.55rem] mb-5 py-2 border-[3px] rounded flex items-center justify-center gap-2 transition-colors"
+              style={{
+                borderColor: powerups ? "var(--amber)" : "rgba(255,255,255,0.2)",
+                color: powerups ? "var(--amber)" : "rgba(255,255,255,0.5)",
+              }}
+            >
+              <span>{powerups ? "❄ POWER-UPS: ON" : "POWER-UPS: OFF"}</span>
             </button>
 
             <div className="text-[0.55rem] opacity-50 arcade text-center mb-3">— or join a friend —</div>
@@ -65,10 +78,10 @@ export default function Home() {
               <li>↑ / ↓ — slide your rods</li>
               <li>← / → — kick the ball (left / right)</li>
               <li>SPACE — shake the table (frees a stuck ball)</li>
-              <li>create a room, share the 4-letter code</li>
+              <li>❄ kick the ball into an ice cube to freeze your foe</li>
             </ul>
             <button
-              onClick={() => router.push("/play/SOLO?m=local")}
+              onClick={() => router.push(`/play/SOLO?m=local&pu=${pu}`)}
               className="btn text-white/80 mt-4 !text-[0.55rem]"
             >
               🎮 Practice (local 2-player)

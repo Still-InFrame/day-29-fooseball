@@ -1,26 +1,94 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #07140d;
+  --bg-2: #0b2118;
+  --felt: #0f7a3f;
+  --wood: #5b3a1e;
+  --wood-light: #7a4f29;
+  --blue: #3b82f6;
+  --red: #ef4444;
+  --amber: #ffcc33;
+  --ink: #eafff2;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-felt: var(--felt);
+  --color-blue: var(--blue);
+  --color-red: var(--red);
+  --color-amber: var(--amber);
+  --font-arcade: var(--font-arcade);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(1200px 800px at 50% -10%, var(--bg-2), transparent 70%),
+    var(--bg);
+  color: var(--ink);
+  font-family: var(--font-arcade), ui-monospace, monospace;
+  -webkit-font-smoothing: none;
 }
+
+/* Arcade scoreboard digits / headings */
+.arcade {
+  font-family: var(--font-arcade), monospace;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+}
+
+/* CRT scanline overlay — sits above the canvas, ignores pointer events. */
+.scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.18) 3px,
+    rgba(0, 0, 0, 0.18) 4px
+  );
+  mix-blend-mode: multiply;
+  border-radius: 10px;
+}
+
+.crt-glow {
+  box-shadow:
+    0 0 0 6px var(--wood),
+    0 0 0 10px var(--wood-light),
+    0 18px 50px rgba(0, 0, 0, 0.6),
+    inset 0 0 60px rgba(0, 0, 0, 0.35);
+}
+
+@keyframes flashIn {
+  0% { transform: scale(0.4); opacity: 0; }
+  30% { transform: scale(1.1); opacity: 1; }
+  80% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.2); opacity: 0; }
+}
+.goal-flash {
+  animation: flashIn 1.6s ease-out forwards;
+}
+
+@keyframes blink {
+  50% { opacity: 0.25; }
+}
+.blink {
+  animation: blink 1s steps(2) infinite;
+}
+
+.btn {
+  font-family: var(--font-arcade), monospace;
+  border: 3px solid currentColor;
+  padding: 0.85rem 1.1rem;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+}
+.btn:hover { transform: translate(-1px, -1px); box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.5); }
+.btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }

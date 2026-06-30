@@ -1,65 +1,92 @@
-import Image from "next/image";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import Leaderboard from "@/components/Leaderboard";
+
+const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // no I/O to avoid confusion
+
+function newCode() {
+  let c = "";
+  for (let i = 0; i < 4; i++) c += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+  return c;
+}
 
 export default function Home() {
+  const router = useRouter();
+  const [join, setJoin] = useState("");
+
+  const create = () => router.push(`/play/${newCode()}?m=host`);
+  const doJoin = () => {
+    const code = join.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+    if (code.length === 4) router.push(`/play/${code}?m=guest`);
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-8 sm:py-12">
+      <header className="text-center mb-10">
+        <h1 className="arcade text-amber text-2xl sm:text-4xl mb-3 drop-shadow-[3px_3px_0_rgba(0,0,0,0.6)]">
+          FOOSE<span className="text-red">BALL</span>
+        </h1>
+        <p className="arcade text-[0.55rem] sm:text-[0.65rem] opacity-70 leading-relaxed">
+          real-time 2-player foosball · first to 5 wins
+        </p>
+      </header>
+
+      <div className="grid md:grid-cols-[1.3fr_1fr] gap-6">
+        <section className="space-y-5">
+          <div className="border-[3px] border-amber/70 crt-glow rounded-lg p-5 bg-black/30">
+            <h2 className="arcade text-[0.7rem] text-amber mb-4">START A MATCH</h2>
+
+            <button onClick={create} className="btn text-blue w-full mb-5 !text-[0.8rem]">
+              ▶ Create Room
+            </button>
+
+            <div className="text-[0.55rem] opacity-50 arcade text-center mb-3">— or join a friend —</div>
+
+            <div className="flex gap-2">
+              <input
+                value={join}
+                onChange={(e) => setJoin(e.target.value.toUpperCase())}
+                onKeyDown={(e) => e.key === "Enter" && doJoin()}
+                placeholder="CODE"
+                maxLength={4}
+                className="arcade flex-1 bg-black/50 border-[3px] border-white/30 rounded px-3 py-3 text-center text-lg tracking-[0.4em] uppercase outline-none focus:border-amber"
+              />
+              <button onClick={doJoin} disabled={join.length < 4} className="btn text-red">
+                Join
+              </button>
+            </div>
+          </div>
+
+          <div className="border-[3px] border-white/15 rounded-lg p-5 bg-black/20">
+            <h3 className="arcade text-[0.6rem] opacity-80 mb-3">HOW TO PLAY</h3>
+            <ul className="arcade text-[0.5rem] leading-[1.8] opacity-70 space-y-1">
+              <li>↑ / ↓ — slide your rods</li>
+              <li>← / → — kick the ball (left / right)</li>
+              <li>SPACE — shake the table (frees a stuck ball)</li>
+              <li>create a room, share the 4-letter code</li>
+            </ul>
+            <button
+              onClick={() => router.push("/play/SOLO?m=local")}
+              className="btn text-white/80 mt-4 !text-[0.55rem]"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+              🎮 Practice (local 2-player)
+            </button>
+          </div>
+        </section>
+
+        <aside className="border-[3px] border-white/15 rounded-lg p-5 bg-black/20">
+          <Leaderboard />
+        </aside>
+      </div>
+
+      <footer className="arcade text-center text-[0.45rem] opacity-40 mt-10 leading-relaxed">
+        day 29 · 100-day ai build challenge ·{" "}
+        <a href="https://www.100dayaichallenge.com/share/savion" className="underline hover:text-amber">
+          savion
+        </a>
+      </footer>
+    </main>
   );
 }

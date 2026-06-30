@@ -1,5 +1,7 @@
 # fooseball
 
+**Live:** https://fooseball.100dayaichallenge.com
+
 Old-school **real-time, 2-player foosball** in the browser. Create a room, share the code (or a one-tap invite link), and play a friend anywhere — first to 5 goals wins. Winners log their initials to a live leaderboard.
 
 Day 29 of Savion's [100-Day AI Build Challenge](https://www.100dayaichallenge.com/share/savion).

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   createState,
@@ -55,6 +55,13 @@ function Game() {
   const [freezeBanner, setFreezeBanner] = useState<{ key: number; side: Side } | null>(null);
   const [muted, setMuted] = useState(false);
   const [copied, setCopied] = useState<"" | "code" | "link">("");
+  // Feature-detect the Fullscreen API on the client (false during SSR) without a
+  // hydration mismatch. iOS Safari reports false, so the button stays hidden there.
+  const fsSupported = useSyncExternalStore(
+    () => () => {},
+    () => !!document.fullscreenEnabled,
+    () => false,
+  );
 
   // ----- refs (engine + loop, no re-render) -----
   const stateRef = useRef<GameState>(createState());
@@ -82,6 +89,12 @@ function Game() {
   useEffect(() => {
     stateRef.current.powerups = powerups;
   }, [powerups]);
+
+  const toggleFullscreen = () => {
+    if (typeof document === "undefined") return;
+    if (document.fullscreenElement) void document.exitFullscreen?.();
+    else void document.documentElement.requestFullscreen?.().catch(() => {});
+  };
 
   // Shake the table (Space). Local screen-shake + sound for the presser; the host
   // owns the ball so it applies the jolt (guest asks via the channel). Either
@@ -490,9 +503,20 @@ function Game() {
           <span className="opacity-40 text-sm">—</span>
           <span className="text-red">{scoreRed}</span>
         </div>
-        <button onClick={() => setMuted((m) => !m)} className="text-[0.6rem] opacity-60 hover:text-amber w-8">
-          {muted ? "🔇" : "🔊"}
-        </button>
+        <div className="flex items-center gap-3">
+          {fsSupported && (
+            <button
+              onClick={toggleFullscreen}
+              aria-label="Toggle fullscreen"
+              className="text-[0.7rem] opacity-60 hover:text-amber"
+            >
+              ⛶
+            </button>
+          )}
+          <button onClick={() => setMuted((m) => !m)} className="text-[0.6rem] opacity-60 hover:text-amber w-8">
+            {muted ? "🔇" : "🔊"}
+          </button>
+        </div>
       </div>
 
       {/* table */}

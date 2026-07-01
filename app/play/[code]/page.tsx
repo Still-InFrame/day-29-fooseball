@@ -98,6 +98,28 @@ function Game() {
     else void document.documentElement.requestFullscreen?.().catch(() => {});
   };
 
+  // Auto-enter fullscreen on the first tap while in landscape (needs a user
+  // gesture, so we hook the first pointerdown). Gives Android/desktop a genuine
+  // chrome-free view; iOS has no Fullscreen API so it quietly gives up (use the
+  // "Add to Home Screen" install for fullscreen there).
+  useEffect(() => {
+    let done = false;
+    const tryFs = () => {
+      if (done) return;
+      if (!document.fullscreenEnabled) {
+        done = true;
+        return;
+      }
+      const landscape = matchMedia("(orientation: landscape) and (max-height: 600px)").matches;
+      if (landscape && !document.fullscreenElement) {
+        done = true;
+        void document.documentElement.requestFullscreen?.().catch(() => {});
+      }
+    };
+    window.addEventListener("pointerdown", tryFs);
+    return () => window.removeEventListener("pointerdown", tryFs);
+  }, []);
+
   // Shake the table (Space). Local screen-shake + sound for the presser; the host
   // owns the ball so it applies the jolt (guest asks via the channel). Either
   // player shaking rattles both screens.
@@ -437,6 +459,7 @@ function Game() {
       raf = requestAnimationFrame(frame);
     };
 
+    reflectPhase(); // sync HUD state to the current phase (e.g. bot/local start mid-countdown)
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
   }, [mode, mySide]);
@@ -565,7 +588,7 @@ function Game() {
         )}
 
         {/* lobby / connecting */}
-        {phase === "lobby" && mode !== "local" && (
+        {phase === "lobby" && mode !== "local" && mode !== "bot" && (
           <Overlay>
             {mode === "host" ? (
               <div className="text-center arcade space-y-4">

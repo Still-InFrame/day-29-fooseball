@@ -141,14 +141,8 @@ body {
   }
   .play-controls {
     position: absolute;
-    bottom: 6px;
-    left: 0;
-    right: 0;
-    display: flex !important;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 8px;
-    padding: 0 8px;
+    inset: 0;
+    display: block !important;
     margin: 0 !important;
     max-width: none !important;
     background: transparent;
@@ -156,11 +150,28 @@ body {
     pointer-events: none;
   }
   .play-controls > button {
+    position: absolute;
     pointer-events: auto;
     background: rgba(0, 0, 0, 0.5) !important;
     backdrop-filter: blur(2px);
     box-shadow: none !important;
-    opacity: 0.9;
+    opacity: 0.92;
+  }
+  /* Kick buttons sit in the natural thumb arcs: inset from the edges and raised
+     up from the very bottom, so they're comfortable to reach while gripping. */
+  .play-controls > button:nth-child(1) {
+    left: 5%;
+    bottom: 13%;
+  }
+  .play-controls > button:nth-child(3) {
+    right: 5%;
+    bottom: 13%;
+  }
+  /* Shake is secondary — tuck it small at the bottom-center. */
+  .play-controls > button:nth-child(2) {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 4%;
   }
   .play-hint {
     display: none;

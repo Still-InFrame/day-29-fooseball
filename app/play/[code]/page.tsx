@@ -467,9 +467,21 @@ function Game() {
   }, []);
 
   return (
-    <main className="flex-1 w-full max-w-4xl mx-auto px-3 py-4 flex flex-col items-center">
+    <main className="play-root flex-1 w-full max-w-4xl mx-auto px-3 py-4 flex flex-col items-center">
+      {/* Portrait phones: nudge to rotate (foosball is a wide game) */}
+      <div className="rotate-nudge">
+        <span className="phone">📱</span>
+        <p className="arcade text-amber text-sm">ROTATE YOUR PHONE</p>
+        <p className="arcade text-[0.6rem] opacity-70 leading-relaxed">
+          fooseball plays best sideways —<br />turn your phone to landscape
+        </p>
+        <button onClick={() => router.push("/")} className="btn text-white/70 !text-[0.55rem] mt-2">
+          ‹ back to menu
+        </button>
+      </div>
+
       {/* scoreboard */}
-      <div className="w-full flex items-center justify-between mb-3 arcade">
+      <div className="play-hud w-full flex items-center justify-between mb-3 arcade">
         <button onClick={() => router.push("/")} className="text-[0.5rem] opacity-60 hover:text-amber">
           ‹ menu
         </button>
@@ -484,7 +496,7 @@ function Game() {
       </div>
 
       {/* table */}
-      <div ref={wrapRef} className="relative w-full" style={{ aspectRatio: `${FIELD.W} / ${FIELD.H}` }}>
+      <div ref={wrapRef} className="play-table relative w-full" style={{ aspectRatio: `${FIELD.W} / ${FIELD.H}` }}>
         <canvas ref={canvasRef} className="w-full h-full rounded-lg crt-glow block touch-none" />
         <div className="scanlines" />
 
@@ -584,7 +596,7 @@ function Game() {
       </div>
 
       {/* touch / click controls — drag the table to move, these to kick + shake */}
-      <div className="w-full max-w-md grid grid-cols-3 gap-2 mt-3 select-none" style={{ touchAction: "none" }}>
+      <div className="play-controls w-full max-w-md grid grid-cols-3 gap-2 mt-3 select-none" style={{ touchAction: "none" }}>
         <button
           data-code="ArrowLeft"
           onPointerDown={onKickDown}
@@ -611,7 +623,7 @@ function Game() {
       </div>
 
       {/* controls hint */}
-      <p className="arcade text-[0.45rem] opacity-50 mt-3 text-center leading-relaxed">
+      <p className="play-hint arcade text-[0.45rem] opacity-50 mt-3 text-center leading-relaxed">
         {mode === "local"
           ? "BLUE: W/S move · A/D kick    ·    RED: ↑/↓ move · ←/→ kick    ·    SPACE: shake table"
           : `${mySide?.toUpperCase()} · drag the table or ↑/↓ to move · ←/→ or buttons to kick · SPACE / shake button`}

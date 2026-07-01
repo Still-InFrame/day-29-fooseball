@@ -81,6 +81,77 @@ body {
   animation: blink 1s steps(2) infinite;
 }
 
+/* ---------- Mobile: rotate-to-play nudge (phones in portrait) ---------- */
+.rotate-nudge {
+  display: none;
+}
+@media (orientation: portrait) and (max-width: 767px) {
+  .rotate-nudge {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    text-align: center;
+    padding: 2rem;
+    background:
+      radial-gradient(900px 600px at 50% -10%, var(--bg-2), transparent 70%),
+      var(--bg);
+  }
+  @keyframes rotateHint {
+    0%, 40% { transform: rotate(0deg); }
+    70%, 100% { transform: rotate(90deg); }
+  }
+  .rotate-nudge .phone {
+    font-size: 3.5rem;
+    animation: rotateHint 2.2s ease-in-out infinite;
+  }
+}
+
+/* ---------- Mobile: landscape play layout (table fills height, controls in corners) ---------- */
+@media (orientation: landscape) and (max-height: 600px) {
+  .play-root {
+    height: 100dvh;
+    justify-content: center;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .play-hud {
+    position: absolute;
+    top: 4px;
+    left: 8px;
+    right: 8px;
+    margin: 0;
+    z-index: 30;
+  }
+  .play-table {
+    height: 88dvh;
+    width: auto !important;
+    max-width: 98vw;
+  }
+  .play-controls {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    right: 6px;
+    max-width: none !important;
+    margin: 0 !important;
+    background: transparent;
+    z-index: 30;
+    pointer-events: none;
+  }
+  .play-controls > button {
+    pointer-events: auto;
+    opacity: 0.92;
+  }
+  .play-hint {
+    display: none;
+  }
+}
+
 .btn {
   font-family: var(--font-arcade), monospace;
   border: 3px solid currentColor;

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Leaderboard from "@/components/Leaderboard";
+import InstallHint from "@/components/InstallHint";
 
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // no I/O to avoid confusion
 
@@ -34,6 +35,8 @@ export default function Home() {
           real-time 2-player foosball · first to 5 wins
         </p>
       </header>
+
+      <InstallHint />
 
       <div className="grid md:grid-cols-[1.3fr_1fr] gap-6 min-w-0">
         <section className="space-y-5 min-w-0">

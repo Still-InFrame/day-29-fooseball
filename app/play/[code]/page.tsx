@@ -8,6 +8,7 @@ import {
   stepHost,
   kick,
   shakeTable,
+  botControl,
   FIELD,
   KB_SPEED,
   type GameState,
@@ -18,7 +19,7 @@ import { RoomConnection, type RodMsg, type SyncMsg } from "@/lib/realtime/room";
 import { submitResult } from "@/lib/leaderboard";
 import * as sfx from "@/lib/sound";
 
-type Mode = "host" | "guest" | "local";
+type Mode = "host" | "guest" | "local" | "bot";
 
 export default function PlayPage() {
   return (
@@ -34,7 +35,8 @@ function Game() {
   const router = useRouter();
   const code = (params.code ?? "").toUpperCase();
   const mode: Mode = (sp.get("m") as Mode) ?? "local";
-  const mySide: Side | null = mode === "host" ? "blue" : mode === "guest" ? "red" : null;
+  const mySide: Side | null =
+    mode === "host" || mode === "bot" ? "blue" : mode === "guest" ? "red" : null;
   const powerups = sp.get("pu") === "1";
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -168,11 +170,11 @@ function Game() {
 
   // ---------------- networking ----------------
   useEffect(() => {
-    if (mode === "local") {
+    if (mode === "local" || mode === "bot") {
       startMatch(stateRef.current);
       return;
     }
-    const room = new RoomConnection(code, mode, {
+    const room = new RoomConnection(code, mode as "host" | "guest", {
       onStatus: setConn,
       onPresence: (present) => {
         oppHereRef.current = present;
@@ -370,8 +372,9 @@ function Game() {
 
       applyMyInput(dt);
 
-      if (mode === "host" || mode === "local") {
+      if (mode === "host" || mode === "local" || mode === "bot") {
         const prevPhase = s.phase;
+        if (mode === "bot") botControl(s, dt);
         stepHost(s, dt);
         playEventSounds();
         onScoreChange();
@@ -706,12 +709,12 @@ function MatchOver({
     }
   };
 
-  if (mode === "local") {
+  if (mode === "local" || mode === "bot") {
+    const title = mode === "bot" ? (winner === "blue" ? "YOU WIN!" : "BOT WINS") : `${winner?.toUpperCase()} WINS`;
+    const titleColor = mode === "bot" ? (winner === "blue" ? "text-amber" : "text-red") : winner === "blue" ? "text-blue" : "text-red";
     return (
       <div className="text-center arcade space-y-5">
-        <p className={`text-2xl ${winner === "blue" ? "text-blue" : "text-red"}`}>
-          {winner?.toUpperCase()} WINS
-        </p>
+        <p className={`text-2xl ${titleColor}`}>{title}</p>
         <p className="text-[0.6rem] opacity-70">
           {Math.max(myGoals, oppGoals)} — {Math.min(myGoals, oppGoals)}
         </p>

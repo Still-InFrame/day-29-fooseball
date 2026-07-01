@@ -225,6 +225,27 @@ export function kick(state: GameState, side: Side, dir?: number) {
   }
 }
 
+// Simple AI for the RED side (single-player practice). Tracks the ball vertically
+// with reaction-limited speed (slower than a human, so it's beatable) and clears
+// the ball toward blue's goal when it's near one of red's rods.
+const BOT_SPEED = 300; // rod tracking speed (units/sec) — player's is faster (430)
+export function botControl(state: GameState, dt: number) {
+  if (state.phase !== "playing" || state.redFrozen > 0) return;
+  const b = state.ball;
+  const desired = Math.max(-FIELD.O_MAX, Math.min(FIELD.O_MAX, b.y - FIELD.H / 2));
+  const step = BOT_SPEED * dt;
+  const delta = desired - state.redTarget;
+  state.redTarget += Math.max(-step, Math.min(step, delta));
+  if (state.redKick <= 0 && b.x > FIELD.W * 0.4) {
+    for (const rod of RODS) {
+      if (rod.side === "red" && Math.abs(b.x - rod.x) < 32) {
+        kick(state, "red", -1);
+        break;
+      }
+    }
+  }
+}
+
 function inGoalMouth(y: number) {
   return y > FIELD.H / 2 - FIELD.GOAL_HALF && y < FIELD.H / 2 + FIELD.GOAL_HALF;
 }

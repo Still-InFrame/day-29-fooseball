@@ -82,10 +82,10 @@ export default function Home() {
               <li>❄ kick the ball into an ice cube to freeze your foe</li>
             </ul>
             <button
-              onClick={() => router.push(`/play/SOLO?m=local&pu=${pu}`)}
+              onClick={() => router.push(`/play/SOLO?m=bot&pu=${pu}`)}
               className="btn text-white/80 mt-4 !text-[0.55rem]"
             >
-              🎮 Practice (local 2-player)
+              🤖 Practice vs Bot
             </button>
           </div>
         </section>
